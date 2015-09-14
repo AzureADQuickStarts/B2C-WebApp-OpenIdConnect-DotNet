@@ -4,6 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Mvc;
+using Microsoft.Owin.Security;
+using System.Web;
+using Microsoft.Owin.Security.OpenIdConnect;
 
 namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
 {
@@ -14,8 +17,15 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
 
         protected override void HandleUnauthorizedRequest(AuthorizationContext filterContext)
         {
-            filterContext.RequestContext.HttpContext.Response.Headers.Add(PolicyOpenIdConnectAuthenticationHandler.PolicyKey, Policy);
-            base.HandleUnauthorizedRequest(filterContext);
+            filterContext.HttpContext.GetOwinContext().Authentication.Challenge(
+                    new AuthenticationProperties(
+                        new Dictionary<string, string> 
+                        { 
+                            {Startup.PolicyKey, Policy}
+                        })
+                    {
+                        RedirectUri = "/",
+                    }, OpenIdConnectAuthenticationDefaults.AuthenticationType);
         }
     }
 }

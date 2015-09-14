@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Globalization;
+using System.IdentityModel.Tokens;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -16,7 +17,7 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
     // while our current libraries are unable to support B2C
     // out of the box.  For the original source code (with comments)
     // visit https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/master/src/Microsoft.IdentityModel.Protocol.Extensions/Configuration/ConfigurationManager.cs
-    class PolicyConfigurationManager : ConfigurationManager<OpenIdConnectConfiguration>
+    class PolicyConfigurationManager : IConfigurationManager<OpenIdConnectConfiguration>
     {
         public static readonly TimeSpan DefaultAutomaticRefreshInterval = new TimeSpan(5, 0, 0, 0);
 
@@ -26,8 +27,7 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
 
         public static readonly TimeSpan MinimumRefreshInterval = new TimeSpan(0, 0, 0, 1);
 
-        // We're assuming the metadata does not contain qp's
-        private const string policyParameter = "?p=";
+        private const string policyParameter = "p";
 
         private TimeSpan _automaticRefreshInterval = DefaultAutomaticRefreshInterval;
         private TimeSpan _refreshInterval = DefaultRefreshInterval;
@@ -40,12 +40,12 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
         private readonly OpenIdConnectConfigurationRetriever _configRetriever;
         private Dictionary<string, OpenIdConnectConfiguration> _currentConfiguration;
 
-        public PolicyConfigurationManager(string metadataAddress)
-            : this(metadataAddress, new HttpDocumentRetriever())
+        public PolicyConfigurationManager(string metadataAddress, string[] policies)
+            : this(metadataAddress, policies, new HttpDocumentRetriever())
         {
         }
 
-        public PolicyConfigurationManager(string metadataAddress, IDocumentRetriever docRetriever) : base (metadataAddress, docRetriever)
+        public PolicyConfigurationManager(string metadataAddress, string[] policies, IDocumentRetriever docRetriever)
         {
             if (string.IsNullOrWhiteSpace(metadataAddress))
             {
@@ -64,6 +64,11 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
             _syncAfter = new Dictionary<string, DateTimeOffset>();
             _lastRefresh = new Dictionary<string, DateTimeOffset>();
             _currentConfiguration = new Dictionary<string, OpenIdConnectConfiguration>();
+            
+            foreach (string policy in policies) 
+            {
+                _currentConfiguration.Add(policy, null);    
+            }
         }
 
         public TimeSpan AutomaticRefreshInterval
@@ -92,7 +97,49 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
             }
         }
 
-        public async Task<OpenIdConnectConfiguration> GetConfigurationAsync(CancellationToken cancel, string policyId)
+        // Takes the ohter and copies it to source, preserving the source's multi-valued attributes as a running sum.
+        private OpenIdConnectConfiguration MergeConfig(OpenIdConnectConfiguration source, OpenIdConnectConfiguration other)
+        {
+            ICollection<SecurityToken> existingSigningTokens = source.SigningTokens;
+            ICollection<string> existingAlgs = source.IdTokenSigningAlgValuesSupported;
+            ICollection<SecurityKey> existingSigningKeys = source.SigningKeys;
+
+            foreach (SecurityToken token in existingSigningTokens)
+            {
+                other.SigningTokens.Add(token);
+            }
+
+            foreach (string alg in existingAlgs)
+            {
+                other.IdTokenSigningAlgValuesSupported.Add(alg);
+            }
+
+            foreach (SecurityKey key in existingSigningKeys)
+            {
+                other.SigningKeys.Add(key);
+            }
+
+            return other;
+        }
+
+        // This non-policy specific method effectively gets the metadata for all policies specified in the constructor,
+        // and merges their signing key metadata.  It selects the other metadata from one of the policies at random.
+        // This is done so that the middleware can take an incoming id_token and validate it against all signing keys
+        // for the app, selecting the appropriate signing key based on the key identifiers.
+        public async Task<OpenIdConnectConfiguration> GetConfigurationAsync(CancellationToken cancel)
+        {
+            OpenIdConnectConfiguration configUnion = new OpenIdConnectConfiguration();
+            Dictionary<string, OpenIdConnectConfiguration> clone = new Dictionary<string, OpenIdConnectConfiguration>(_currentConfiguration);
+            foreach (KeyValuePair<string, OpenIdConnectConfiguration> entry in clone)
+            {
+                OpenIdConnectConfiguration config = await GetConfigurationByPolicyAsync(cancel, entry.Key);
+                configUnion = MergeConfig(configUnion, config);
+            }
+
+            return configUnion;
+        }
+
+        public async Task<OpenIdConnectConfiguration> GetConfigurationByPolicyAsync(CancellationToken cancel, string policyId)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
 
@@ -121,7 +168,8 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
                 {
                     try
                     {
-                        config = await OpenIdConnectConfigurationRetriever.GetAsync(String.Format(_metadataAddress + "{0}{1}", policyParameter, policyId), _docRetriever, CancellationToken.None);
+                        // We're assuming the metadata address provided in the constructor does not contain qp's
+                        config = await OpenIdConnectConfigurationRetriever.GetAsync(String.Format(_metadataAddress + "?{0}={1}", policyParameter, policyId), _docRetriever, cancel);
                         _currentConfiguration[policyId] = config;
                         Contract.Assert(_currentConfiguration[policyId] != null);
                         _lastRefresh[policyId] = now;
@@ -154,6 +202,14 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
             if (!_lastRefresh.TryGetValue(policyId, out refresh) || now >= _lastRefresh[policyId].UtcDateTime.Add(RefreshInterval))
             {
                 _syncAfter[policyId] = now;
+            }
+        }
+
+        public void RequestRefresh()
+        {
+            foreach (KeyValuePair<string, OpenIdConnectConfiguration> entry in _currentConfiguration)
+            {
+                RequestRefresh(entry.Key);
             }
         }
     }

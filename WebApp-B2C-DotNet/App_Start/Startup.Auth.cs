@@ -15,6 +15,8 @@ using System.Web.Mvc;
 using System.Configuration;
 using System.IdentityModel.Tokens;
 using WebApp_OpenIDConnect_DotNet_B2C.Policies;
+using System.Threading;
+using System.Globalization;
 
 namespace WebApp_OpenIDConnect_DotNet_B2C
 {
@@ -22,6 +24,8 @@ namespace WebApp_OpenIDConnect_DotNet_B2C
 	{
         // The ACR claim is used to indicate which policy was executed
         public const string AcrClaimType = "http://schemas.microsoft.com/claims/authnclassreference";
+        public const string PolicyKey = "b2cpolicy";
+        public const string OIDCMetadataSuffix = "/.well-known/openid-configuration";
 
         // App config settings
         private static string clientId = ConfigurationManager.AppSettings["ida:ClientId"];
@@ -49,13 +53,16 @@ namespace WebApp_OpenIDConnect_DotNet_B2C
                 Notifications = new OpenIdConnectAuthenticationNotifications
                 { 
                     AuthenticationFailed = AuthenticationFailed,
+                    RedirectToIdentityProvider = OnRedirectToIdentityProvider,
                 },
                 Scope = "openid",
                 ResponseType = "id_token",
 
                 // The PolicyConfigurationManager takes care of getting the correct Azure AD authentication
                 // endpoints from the OpenID Connect metadata endpoint.  It is included in the PolicyAuthHelpers folder.
-                ConfigurationManager = new PolicyConfigurationManager("https://login.microsoftonline.com/" + tenant + "/v2.0/.well-known/openid-configuration"),
+                ConfigurationManager = new PolicyConfigurationManager(
+                    String.Format(CultureInfo.InvariantCulture, aadInstance, tenant, "/v2.0", OIDCMetadataSuffix),
+                    new string[] { SignUpPolicyId, SignInPolicyId, ProfilePolicyId }),
 
                 // This piece is optional - it is used for displaying the user's name in the navigation bar.
                 TokenValidationParameters = new TokenValidationParameters
@@ -64,11 +71,24 @@ namespace WebApp_OpenIDConnect_DotNet_B2C
                 },
             };
 
-            // The PolicyOpenIdConnectAuthenticationMiddleware is a small extension of the default OpenIdConnectMiddleware
-            // included in OWIN.  It is included in this sample in the PolicyAuthHelpers folder, along with a few other
-            // supplementary classes related to policies.
-            app.Use(typeof(PolicyOpenIdConnectAuthenticationMiddleware), app, options);
+            app.UseOpenIdConnectAuthentication(options);
                 
+        }
+
+        // This notification can be used to manipulate the OIDC request before it is sent.  Here we use it to send the correct policy.
+        private async Task OnRedirectToIdentityProvider(RedirectToIdentityProviderNotification<OpenIdConnectMessage, OpenIdConnectAuthenticationOptions> notification)
+        {
+            PolicyConfigurationManager mgr = notification.Options.ConfigurationManager as PolicyConfigurationManager;
+            if (notification.ProtocolMessage.RequestType == OpenIdConnectRequestType.LogoutRequest)
+            {
+                OpenIdConnectConfiguration config = await mgr.GetConfigurationByPolicyAsync(CancellationToken.None, notification.OwinContext.Authentication.AuthenticationResponseRevoke.Properties.Dictionary[Startup.PolicyKey]);
+                notification.ProtocolMessage.IssuerAddress = config.EndSessionEndpoint;
+            }
+            else
+            {
+                OpenIdConnectConfiguration config = await mgr.GetConfigurationByPolicyAsync(CancellationToken.None, notification.OwinContext.Authentication.AuthenticationResponseChallenge.Properties.Dictionary[Startup.PolicyKey]);
+                notification.ProtocolMessage.IssuerAddress = config.AuthorizationEndpoint;
+            }
         }
 
         // Used for avoiding yellow-screen-of-death

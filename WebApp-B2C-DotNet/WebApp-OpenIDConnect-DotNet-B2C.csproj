@@ -152,8 +152,6 @@
   <ItemGroup>
     <Compile Include="PolicyAuthHelpers\PolicyAuthorize.cs" />
     <Compile Include="PolicyAuthHelpers\PolicyConfigurationManager.cs" />
-    <Compile Include="PolicyAuthHelpers\PolicyOpenIdConnectAuthenticationHandler.cs" />
-    <Compile Include="PolicyAuthHelpers\PolicyOpenIdConnectAuthenticationMiddleware.cs" />
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="PolicyAuthHelpers\HttpDocumentRetriever.cs" />
@@ -196,7 +194,9 @@
     <Content Include="Scripts\respond.matchmedia.addListener.min.js" />
     <Content Include="Scripts\respond.min.js" />
     <Content Include="Scripts\_references.js" />
-    <Content Include="Web.config" />
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </Content>
