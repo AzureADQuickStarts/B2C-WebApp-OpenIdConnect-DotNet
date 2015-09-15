@@ -15,13 +15,10 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Controllers
             return View();
         }
 
-        // You can use the PolicyAuthorize decorator to execute a certain policy if the user is not already signed into the app.
-        [PolicyAuthorize(Policy = "b2c_1_sign_in_v2")]
+        // TODO: Secure this action with a sign-in policy
         public ActionResult Claims()
         {
-            Claim displayName = ClaimsPrincipal.Current.FindFirst(ClaimsPrincipal.Current.Identities.First().NameClaimType);
-            ViewBag.DisplayName = displayName != null ? displayName.Value : string.Empty;
-            return View();
+            // TODO: Extract user information from the claims in the ClaimsPrincipal.
         }
 
         public ActionResult Error(string message)
