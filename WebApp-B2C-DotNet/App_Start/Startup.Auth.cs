@@ -64,10 +64,10 @@ namespace WebApp_OpenIDConnect_DotNet_B2C
                     String.Format(CultureInfo.InvariantCulture, aadInstance, tenant, "/v2.0", OIDCMetadataSuffix),
                     new string[] { SignUpPolicyId, SignInPolicyId, ProfilePolicyId }),
 
-                // This piece is optional - it is used for displaying the user's name in the navigation bar.
                 TokenValidationParameters = new TokenValidationParameters
                 {  
-                    NameClaimType = "name",
+                    NameClaimType = "name", // This piece is optional - it is used for displaying the user's name in the navigation bar.
+                    ValidateIssuer = false
                 },
             };
 

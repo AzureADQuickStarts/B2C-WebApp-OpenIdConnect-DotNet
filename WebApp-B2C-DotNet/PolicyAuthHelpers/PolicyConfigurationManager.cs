@@ -97,29 +97,29 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
             }
         }
 
-        // Takes the ohter and copies it to source, preserving the source's multi-valued attributes as a running sum.
+        // Takes the other and copies it to source, preserving the source's multi-valued attributes as a running sum.
         private OpenIdConnectConfiguration MergeConfig(OpenIdConnectConfiguration source, OpenIdConnectConfiguration other)
         {
-            ICollection<SecurityToken> existingSigningTokens = source.SigningTokens;
-            ICollection<string> existingAlgs = source.IdTokenSigningAlgValuesSupported;
-            ICollection<SecurityKey> existingSigningKeys = source.SigningKeys;
+            ICollection<SecurityToken> existingSigningTokens = other.SigningTokens;
+            ICollection<string> existingAlgs = other.IdTokenSigningAlgValuesSupported;
+            ICollection<SecurityKey> existingSigningKeys = other.SigningKeys;
 
             foreach (SecurityToken token in existingSigningTokens)
             {
-                other.SigningTokens.Add(token);
+                source.SigningTokens.Add(token);
             }
 
             foreach (string alg in existingAlgs)
             {
-                other.IdTokenSigningAlgValuesSupported.Add(alg);
+                source.IdTokenSigningAlgValuesSupported.Add(alg);
             }
 
             foreach (SecurityKey key in existingSigningKeys)
             {
-                other.SigningKeys.Add(key);
+                source.SigningKeys.Add(key);
             }
 
-            return other;
+            return source;
         }
 
         // This non-policy specific method effectively gets the metadata for all policies specified in the constructor,
