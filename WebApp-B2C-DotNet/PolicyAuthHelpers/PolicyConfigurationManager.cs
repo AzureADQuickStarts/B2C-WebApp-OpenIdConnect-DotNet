@@ -97,29 +97,29 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
             }
         }
 
-        // Takes the other and copies it to source, preserving the source's multi-valued attributes as a running sum.
+        // Takes the source and copies it to other, preserving the other's multi-valued attributes as a running sum.
         private OpenIdConnectConfiguration MergeConfig(OpenIdConnectConfiguration source, OpenIdConnectConfiguration other)
         {
-            ICollection<SecurityToken> existingSigningTokens = other.SigningTokens;
-            ICollection<string> existingAlgs = other.IdTokenSigningAlgValuesSupported;
-            ICollection<SecurityKey> existingSigningKeys = other.SigningKeys;
+            ICollection<SecurityToken> existingSigningTokens = source.SigningTokens;
+            ICollection<string> existingAlgs = source.IdTokenSigningAlgValuesSupported;
+            ICollection<SecurityKey> existingSigningKeys = source.SigningKeys;
 
             foreach (SecurityToken token in existingSigningTokens)
             {
-                source.SigningTokens.Add(token);
+                other.SigningTokens.Add(token);
             }
 
             foreach (string alg in existingAlgs)
             {
-                source.IdTokenSigningAlgValuesSupported.Add(alg);
+                other.IdTokenSigningAlgValuesSupported.Add(alg);
             }
 
             foreach (SecurityKey key in existingSigningKeys)
             {
-                source.SigningKeys.Add(key);
+                other.SigningKeys.Add(key);
             }
 
-            return source;
+            return other;
         }
 
         // This non-policy specific method effectively gets the metadata for all policies specified in the constructor,
@@ -133,7 +133,7 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
             foreach (KeyValuePair<string, OpenIdConnectConfiguration> entry in clone)
             {
                 OpenIdConnectConfiguration config = await GetConfigurationByPolicyAsync(cancel, entry.Key);
-                configUnion = MergeConfig(configUnion, config);
+                configUnion = MergeConfig(config, configUnion);
             }
 
             return configUnion;
