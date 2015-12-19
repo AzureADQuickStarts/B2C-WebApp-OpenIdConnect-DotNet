@@ -97,29 +97,41 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
             }
         }
 
-        // Takes the ohter and copies it to source, preserving the source's multi-valued attributes as a running sum.
-        private OpenIdConnectConfiguration MergeConfig(OpenIdConnectConfiguration source, OpenIdConnectConfiguration other)
+        // Takes the other and copies it to source, preserving the source's multi-valued attributes as a running sum.
+        private OpenIdConnectConfiguration MergeConfig(OpenIdConnectConfiguration source, OpenIdConnectConfiguration other, bool collectionsOnly)
         {
-            ICollection<SecurityToken> existingSigningTokens = source.SigningTokens;
-            ICollection<string> existingAlgs = source.IdTokenSigningAlgValuesSupported;
-            ICollection<SecurityKey> existingSigningKeys = source.SigningKeys;
+            ICollection<SecurityToken> existingSigningTokens = other.SigningTokens;
+            ICollection<string> existingAlgs = other.IdTokenSigningAlgValuesSupported;
+            ICollection<SecurityKey> existingSigningKeys = other.SigningKeys;
 
             foreach (SecurityToken token in existingSigningTokens)
             {
-                other.SigningTokens.Add(token);
+                source.SigningTokens.Add(token);
             }
 
             foreach (string alg in existingAlgs)
             {
-                other.IdTokenSigningAlgValuesSupported.Add(alg);
+                source.IdTokenSigningAlgValuesSupported.Add(alg);
             }
 
             foreach (SecurityKey key in existingSigningKeys)
             {
-                other.SigningKeys.Add(key);
+                source.SigningKeys.Add(key);
             }
 
-            return other;
+            if (!collectionsOnly)
+            {
+                source.AuthorizationEndpoint = other.AuthorizationEndpoint;
+                source.CheckSessionIframe = other.CheckSessionIframe;
+                source.EndSessionEndpoint = other.EndSessionEndpoint;
+                source.Issuer = other.Issuer;
+                source.JwksUri = other.JwksUri;
+                source.TokenEndpoint = other.TokenEndpoint;
+                source.UserInfoEndpoint = other.UserInfoEndpoint;
+                source.JsonWebKeySet = other.JsonWebKeySet;
+            }
+
+            return source;
         }
 
         // This non-policy specific method effectively gets the metadata for all policies specified in the constructor,
@@ -130,10 +142,15 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
         {
             OpenIdConnectConfiguration configUnion = new OpenIdConnectConfiguration();
             Dictionary<string, OpenIdConnectConfiguration> clone = new Dictionary<string, OpenIdConnectConfiguration>(_currentConfiguration);
+
+            int count = 0;
             foreach (KeyValuePair<string, OpenIdConnectConfiguration> entry in clone)
             {
                 OpenIdConnectConfiguration config = await GetConfigurationByPolicyAsync(cancel, entry.Key);
-                configUnion = MergeConfig(configUnion, config);
+
+                bool copyCollectionsOnly = (count > 0);
+                configUnion = MergeConfig(configUnion, config, copyCollectionsOnly);
+                count++;
             }
 
             return configUnion;

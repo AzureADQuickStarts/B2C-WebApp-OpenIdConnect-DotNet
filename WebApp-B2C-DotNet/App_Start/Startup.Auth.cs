@@ -66,7 +66,7 @@ namespace WebApp_OpenIDConnect_DotNet_B2C
 
                 // This piece is optional - it is used for displaying the user's name in the navigation bar.
                 TokenValidationParameters = new TokenValidationParameters
-                {  
+                {
                     NameClaimType = "name",
                 },
             };
