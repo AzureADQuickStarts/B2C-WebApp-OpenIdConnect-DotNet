@@ -26,6 +26,7 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
                     {
                         RedirectUri = "/",
                     }, OpenIdConnectAuthenticationDefaults.AuthenticationType);
+            base.HandleUnauthorizedRequest(filterContext);
         }
     }
 }
