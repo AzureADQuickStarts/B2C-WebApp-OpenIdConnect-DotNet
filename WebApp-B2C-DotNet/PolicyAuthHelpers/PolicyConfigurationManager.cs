@@ -97,29 +97,51 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
             }
         }
 
-        // Takes the ohter and copies it to source, preserving the source's multi-valued attributes as a running sum.
-        private OpenIdConnectConfiguration MergeConfig(OpenIdConnectConfiguration source, OpenIdConnectConfiguration other)
+        // Adds the signing keys from the source to the other, preserving the remaining metadata from the other.
+        private void MergeConfig(OpenIdConnectConfiguration result, OpenIdConnectConfiguration source)
         {
-            ICollection<SecurityToken> existingSigningTokens = source.SigningTokens;
-            ICollection<string> existingAlgs = source.IdTokenSigningAlgValuesSupported;
-            ICollection<SecurityKey> existingSigningKeys = source.SigningKeys;
+            result.AuthorizationEndpoint = source.AuthorizationEndpoint;
+            result.CheckSessionIframe = source.CheckSessionIframe;
+            result.EndSessionEndpoint = source.EndSessionEndpoint;
+            result.Issuer = source.Issuer;
+            result.JsonWebKeySet = source.JsonWebKeySet;
+            result.JwksUri = source.JwksUri;
+            result.TokenEndpoint = source.TokenEndpoint;
+            result.UserInfoEndpoint = source.UserInfoEndpoint;
 
-            foreach (SecurityToken token in existingSigningTokens)
+            foreach (string alg in source.IdTokenSigningAlgValuesSupported)
             {
-                other.SigningTokens.Add(token);
+                if (!result.IdTokenSigningAlgValuesSupported.Contains(alg))
+                {
+                    result.IdTokenSigningAlgValuesSupported.Add(alg);
+                }
             }
 
-            foreach (string alg in existingAlgs)
+            foreach (string type in source.ResponseTypesSupported)
             {
-                other.IdTokenSigningAlgValuesSupported.Add(alg);
+                if (!result.ResponseTypesSupported.Contains(type))
+                {
+                    result.ResponseTypesSupported.Add(type);
+                }
             }
 
-            foreach (SecurityKey key in existingSigningKeys)
+            foreach (string type in source.SubjectTypesSupported)
             {
-                other.SigningKeys.Add(key);
+                if (!result.ResponseTypesSupported.Contains(type))
+                {
+                    result.SubjectTypesSupported.Add(type);
+                }
             }
 
-            return other;
+            foreach (SecurityKey key in source.SigningKeys)
+            {
+                result.SigningKeys.Add(key);
+            }
+
+            foreach (SecurityToken token in source.SigningTokens)
+            {
+                result.SigningTokens.Add(token);
+            }
         }
 
         // This non-policy specific method effectively gets the metadata for all policies specified in the constructor,
@@ -133,7 +155,7 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Policies
             foreach (KeyValuePair<string, OpenIdConnectConfiguration> entry in clone)
             {
                 OpenIdConnectConfiguration config = await GetConfigurationByPolicyAsync(cancel, entry.Key);
-                configUnion = MergeConfig(configUnion, config);
+                MergeConfig(configUnion, config);
             }
 
             return configUnion;
