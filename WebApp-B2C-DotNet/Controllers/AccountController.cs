@@ -46,9 +46,7 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Controllers
 
         public void SignOut()
         {
-            // To sign out the user, you should issue an OpenIDConnect sign out request using the last policy that the user executed.
-            // This is as easy as looking up the current value of the ACR claim, adding it to the AuthenticationProperties, and making an OWIN SignOut call.
-
+            // To sign out the user, you should issue an OpenIDConnect sign out request.
             if (Request.IsAuthenticated)
             {
                 IEnumerable<AuthenticationDescription> authTypes = HttpContext.GetOwinContext().Authentication.GetAuthenticationTypes();
