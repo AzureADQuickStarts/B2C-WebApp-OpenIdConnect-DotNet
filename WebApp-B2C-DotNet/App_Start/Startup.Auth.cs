@@ -39,9 +39,9 @@ namespace WebApp_OpenIDConnect_DotNet_B2C
             app.UseCookieAuthentication(new CookieAuthenticationOptions());
 
             // Configure OpenID Connect middleware for each policy
-            app.UseOpenIdConnectAuthentication(CreateOptionsFromPolicy(SignInPolicyId));
             app.UseOpenIdConnectAuthentication(CreateOptionsFromPolicy(SignUpPolicyId));
             app.UseOpenIdConnectAuthentication(CreateOptionsFromPolicy(ProfilePolicyId));
+            app.UseOpenIdConnectAuthentication(CreateOptionsFromPolicy(SignInPolicyId));
         }
 
         // Used for avoiding yellow-screen-of-death
