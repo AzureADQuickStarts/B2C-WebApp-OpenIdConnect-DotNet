@@ -30,15 +30,20 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Controllers
             }
         }
 
-
         public void Profile()
         {
-            // TODO: Execute the edit profile policy
+            if (Request.IsAuthenticated)
+            {
+                // TODO: Execute the edit profile policy
+            }
         }
 
         public void SignOut()
         {
-            // TODO: Sign the user out of the app
+            if (Request.IsAuthenticated)
+            {
+                // TODO: Sign the user out of the app
+            }
         }
 	}
 }
