@@ -8,7 +8,6 @@ using System.Web.Mvc;
 using Microsoft.Owin.Security;
 using Microsoft.Owin.Security.OpenIdConnect;
 using Microsoft.Owin.Security.Cookies;
-using WebApp_OpenIDConnect_DotNet_B2C.Policies;
 using System.Security.Claims;
 
 namespace WebApp_OpenIDConnect_DotNet_B2C.Controllers
@@ -17,22 +16,34 @@ namespace WebApp_OpenIDConnect_DotNet_B2C.Controllers
     {
         public void SignIn()
         {
-            // TODO: Execute a sign in policy
+            if (!Request.IsAuthenticated)
+            {
+                // TODO: Execute the sign in policy
+            }
         }
 
         public void SignUp()
         {
-            // TODO: Execute a sign up policy
+            if (!Request.IsAuthenticated)
+            {
+                // TODO: Execute the sign up policy
+            }
         }
 
         public void Profile()
         {
-            // TODO: Execute an edit profile policy
+            if (Request.IsAuthenticated)
+            {
+                // TODO: Execute the edit profile policy
+            }
         }
 
         public void SignOut()
         {
-            // TODO: Sign the user out using OWIN.
+            if (Request.IsAuthenticated)
+            {
+                // TODO: Sign the user out of the app
+            }
         }
 	}
 }
